@@ -36,7 +36,9 @@ export type AuditEvent =
   | 'STAFF_REACTIVATED'
   | 'REPLENISHMENT_REQUESTED'
   | 'REPLENISHMENT_APPROVED'
-  | 'REPLENISHMENT_REJECTED';
+  | 'REPLENISHMENT_REJECTED'
+  | 'CUSTOMER_REGISTERED'
+  | 'CUSTOMER_LANGUAGE_SET';
 
 export async function audit(
   client: PoolClient,

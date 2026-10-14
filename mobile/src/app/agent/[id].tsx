@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/button';
@@ -19,10 +19,10 @@ import {
   type SignedReceipt,
   type Tx,
 } from '@/lib/counter';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 type Tone = 'wait' | 'act' | 'ok' | 'stop';
-const TONE_COLOR: Record<Tone, string> = { wait: colors.border, act: colors.accent, ok: colors.ok, stop: colors.danger };
+const toneColors = (colors: Colors): Record<Tone, string> => ({ wait: colors.border, act: colors.accent, ok: colors.ok, stop: colors.danger });
 
 function callText(tx: Tx): string {
   const c = tx.confirmation;
@@ -89,6 +89,8 @@ function status(tx: Tx): { tone: Tone; title: string; detail?: string } {
 }
 
 export default function TransactionScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tx, setTx] = useState<Tx | null>(null);
   const [receipt, setReceipt] = useState<SignedReceipt | null>(null);
@@ -149,8 +151,8 @@ export default function TransactionScreen() {
         <Text style={styles.muted}>{tx.accountLabel}</Text>
       </View>
 
-      <View style={[styles.panel, { borderColor: TONE_COLOR[s.tone], borderWidth: 2 }]} accessibilityLiveRegion="polite">
-        <Text style={[styles.title, { color: s.tone === 'wait' ? colors.text : TONE_COLOR[s.tone] }]}>{s.title}</Text>
+      <View style={[styles.panel, { borderColor: toneColors(colors)[s.tone], borderWidth: 2 }]} accessibilityLiveRegion="polite">
+        <Text style={[styles.title, { color: s.tone === 'wait' ? colors.text : toneColors(colors)[s.tone] }]}>{s.title}</Text>
         {s.detail ? <Text style={styles.body}>{s.detail}</Text> : null}
         {!final && s.tone === 'wait' && <ActivityIndicator color={colors.accent} />}
       </View>
@@ -203,7 +205,8 @@ export default function TransactionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: size.pad },
   panel: { backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: size.pad, gap: 6 },

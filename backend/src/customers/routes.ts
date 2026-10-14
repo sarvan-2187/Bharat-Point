@@ -2,7 +2,8 @@
  * Customer lookup for the agent's counter screen (Phase 7).
  */
 import { Router } from 'express';
-import { withTransaction } from '../db/pool';
+import pool, { withTransaction } from '../db/pool';
+import { parseLanguage, signUp } from './signup';
 import { audit } from '../db/audit';
 import { requireRole } from '../auth/middleware';
 import { findByPhone, normalizePhone } from './customers';
@@ -18,6 +19,31 @@ router.get('/customers', requireRole('AGENT'), async (req, res) => {
     return found;
   });
   res.json({ customers });
+});
+
+// Public: the signup screen's bank picker.
+router.get('/banks', async (_req, res) => {
+  const { rows } = await pool.query(`SELECT code, display_name AS "displayName" FROM banks ORDER BY code`);
+  res.json({ banks: rows });
+});
+
+// Public (demo mode only): the proof of key possession inside the body is the credential.
+router.post('/auth/signup', async (req, res) => {
+  res.status(201).json(await signUp(req.body));
+});
+
+router.get('/me/preferences', requireRole('CUSTOMER'), async (req, res) => {
+  const { rows } = await pool.query(`SELECT preferred_language AS language FROM customers WHERE id = $1`, [req.auth!.customerId]);
+  res.json(rows[0]);
+});
+
+router.put('/me/preferences', requireRole('CUSTOMER'), async (req, res) => {
+  const language = parseLanguage(req.body?.language);
+  await withTransaction(async (c) => {
+    await c.query(`UPDATE customers SET preferred_language = $2 WHERE id = $1`, [req.auth!.customerId, language]);
+    await audit(c, 'CUSTOMER_LANGUAGE_SET', { actorUserId: req.auth!.userId, data: { language } });
+  });
+  res.json({ language });
 });
 
 export default router;

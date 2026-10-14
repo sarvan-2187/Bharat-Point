@@ -1,15 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { StateBadge } from '@/components/badge';
 import { Button } from '@/components/button';
-import { listTransactions, rupees, stateLabel, TXN_LABEL, type Tx } from '@/lib/counter';
-import { colors, size } from '@/lib/theme';
+import { listTransactions, rupees, TXN_LABEL, type Tx } from '@/lib/counter';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /**
  * Agent home: start a cash-out or cash-in, or pick up a recent transaction
  * (for example after the app was closed while the customer was on the call).
  */
 export default function AgentHome() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +61,7 @@ export default function AgentHome() {
         >
           <View style={styles.rowTop}>
             <Text style={styles.amount}>{rupees(item.amountMinor)}</Text>
-            <Text style={styles.state}>{stateLabel(item.state)}</Text>
+            <StateBadge state={item.state} />
           </View>
           <Text style={styles.muted}>
             {TXN_LABEL[item.txnType]} · {item.customerName} · {new Date(item.createdAt).toLocaleTimeString()}
@@ -69,15 +72,15 @@ export default function AgentHome() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 8 },
   header: { gap: 12, marginBottom: 4 },
   label: { color: colors.muted, fontSize: 14, letterSpacing: 2, marginTop: size.pad },
-  muted: { color: colors.muted, fontSize: 14 },
+  muted: { color: colors.muted, fontSize: size.small },
   error: { color: colors.danger, fontSize: size.body },
-  row: { backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 12, gap: 4 },
+  row: { backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1, borderRadius: size.radius, padding: size.pad, gap: 6 },
   pressed: { opacity: 0.7 },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   amount: { color: colors.text, fontSize: size.button, fontWeight: '700' },
-  state: { color: colors.accent, fontSize: 14 },
 });

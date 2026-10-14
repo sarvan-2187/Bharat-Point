@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /** The app's two buttons: a solid amber primary and an outlined secondary (red when `danger`). */
 export function Button({
@@ -15,6 +16,8 @@ export function Button({
   danger?: boolean;
   disabled?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const primary = kind === 'primary';
   return (
     <Pressable
@@ -34,11 +37,12 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: { borderRadius: 8, padding: size.pad, alignItems: 'center', minHeight: 56, justifyContent: 'center' },
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
+  base: { borderRadius: size.radius, padding: size.pad, alignItems: 'center', minHeight: 60, justifyContent: 'center' },
   primary: { backgroundColor: colors.accent },
-  secondary: { borderColor: colors.border, borderWidth: 1 },
+  secondary: { borderColor: colors.muted, borderWidth: 1.5 },
   dim: { opacity: 0.5 },
   primaryLabel: { color: colors.bg, fontSize: size.button, fontWeight: '700' },
-  secondaryLabel: { color: colors.text, fontSize: size.body },
+  secondaryLabel: { color: colors.text, fontSize: size.body, fontWeight: '600' },
 });

@@ -14,7 +14,7 @@ import { query } from '../db/pool';
 import { fail } from '../api/errors';
 import { sha256Hex } from './crypto';
 
-export type Role = 'AGENT' | 'ADMIN' | 'BANK_OPERATOR';
+export type Role = 'AGENT' | 'ADMIN' | 'BANK_OPERATOR' | 'CUSTOMER';
 
 export interface Auth {
   sessionId: string;
@@ -25,6 +25,7 @@ export interface Auth {
   role: Role;
   bankId: string | null; // BANK_OPERATOR only
   agentId: string | null; // AGENT only
+  customerId: string | null; // CUSTOMER only
 }
 
 declare global {
@@ -41,11 +42,12 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   if (header?.startsWith('Bearer ')) {
     const { rows } = await query<Auth>(
       `SELECT s.id AS "sessionId", s.device_key_id AS "deviceKeyId", u.id AS "userId", u.staff_code AS "staffCode",
-              u.display_name AS "displayName", u.role, u.bank_id AS "bankId", a.id AS "agentId"
+              u.display_name AS "displayName", u.role, u.bank_id AS "bankId", a.id AS "agentId", cu.id AS "customerId"
          FROM sessions s
          JOIN users u       ON u.id = s.user_id
          JOIN device_keys d ON d.id = s.device_key_id
-         LEFT JOIN agents a ON a.user_id = u.id
+         LEFT JOIN agents a     ON a.user_id = u.id
+         LEFT JOIN customers cu ON cu.user_id = u.id
         WHERE s.token_hash = $1
           AND s.revoked_at IS NULL AND s.expires_at > NOW()
           AND d.revoked_at IS NULL

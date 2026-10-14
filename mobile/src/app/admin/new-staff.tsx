@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
 import { InviteQr } from '@/components/invite-qr';
 import { createStaff, type Invite } from '@/lib/admin';
 import type { Role } from '@/lib/session';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 const ROLES: { role: Role; label: string; prefix: string }[] = [
   { role: 'AGENT', label: 'Agent', prefix: 'AG-' },
@@ -15,6 +15,8 @@ const ROLES: { role: Role; label: string; prefix: string }[] = [
 
 /** Add a staff member, then show their one-time enrolment QR to scan on their own phone. */
 export default function NewStaff() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [role, setRole] = useState<Role>('AGENT');
   const [staffCode, setStaffCode] = useState('AG-');
   const [displayName, setDisplayName] = useState('');
@@ -94,7 +96,8 @@ export default function NewStaff() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 10 },
   label: { color: colors.muted, fontSize: 14, letterSpacing: 2, marginTop: 6 },
   muted: { color: colors.muted, fontSize: 14 },

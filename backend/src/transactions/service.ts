@@ -336,14 +336,21 @@ export async function loadView(q: Pick<PoolClient, 'query'>, txId: string): Prom
 /** The most recent transactions this staff member may see: the same rule as canSee. */
 export async function listViews(q: Pick<PoolClient, 'query'>, auth: Auth): Promise<TxViewRow[]> {
   const [where, params] =
-    auth.role === 'ADMIN' ? ['TRUE', []] : auth.role === 'AGENT' ? ['t.agent_id = $1', [auth.agentId]] : ['t.bank_id = $1', [auth.bankId]];
+    auth.role === 'ADMIN'
+      ? ['TRUE', []]
+      : auth.role === 'AGENT'
+        ? ['t.agent_id = $1', [auth.agentId]]
+        : auth.role === 'CUSTOMER'
+          ? ['t.customer_id = $1', [auth.customerId]]
+          : ['t.bank_id = $1', [auth.bankId]];
   const { rows } = await q.query<TxViewRow>(`${VIEW_SELECT} WHERE ${where} ORDER BY t.created_at DESC LIMIT 30`, params);
   return rows;
 }
 
-/** Agents see their own; bank operators see their bank's; admins see all. */
+/** Agents see their own; bank operators see their bank's; customers see theirs; admins see all. */
 export const canSee = (auth: Auth, tx: TxRow) =>
   auth.role === 'ADMIN' ||
+  (auth.role === 'CUSTOMER' && tx.customer_id === auth.customerId) ||
   (auth.role === 'AGENT' && tx.agent_id === auth.agentId) ||
   (auth.role === 'BANK_OPERATOR' && tx.bank_id === auth.bankId);
 

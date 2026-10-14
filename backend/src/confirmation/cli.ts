@@ -51,6 +51,7 @@ async function demoAgent() {
     role: 'AGENT',
     bankId: null,
     agentId: row.agent_id,
+    customerId: null,
   };
   const sign = (intentHash: string) => crypto.sign(null, Buffer.from(intentMessage(intentHash), 'utf8'), privateKey).toString('base64url');
   return { auth, sign };

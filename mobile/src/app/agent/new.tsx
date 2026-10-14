@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/button';
@@ -14,7 +14,7 @@ import {
   type CustomerMatch,
   type TxnType,
 } from '@/lib/counter';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /**
  * New transaction: find the customer by mobile number, pick the account,
@@ -22,6 +22,8 @@ import { colors, size } from '@/lib/theme';
  * confirms the amount on the call. The transaction screen takes over from there.
  */
 export default function NewTransaction() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { type } = useLocalSearchParams<{ type?: string }>();
   const txnType: TxnType = type === 'CASH_IN' ? 'CASH_IN' : 'CASH_OUT';
 
@@ -158,7 +160,8 @@ export default function NewTransaction() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 12 },
   label: { color: colors.muted, fontSize: 14, letterSpacing: 2 },
   muted: { color: colors.muted, fontSize: 14 },

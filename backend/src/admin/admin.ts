@@ -33,6 +33,7 @@ export async function listStaff(q: Q) {
        FROM users u
        LEFT JOIN agents a ON a.user_id = u.id
        LEFT JOIN banks b  ON b.id = u.bank_id
+      WHERE u.role <> 'CUSTOMER'
       ORDER BY u.role, u.staff_code`
   );
   return rows;

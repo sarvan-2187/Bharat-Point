@@ -1,9 +1,12 @@
+import { useMemo } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import type { Invite } from '@/lib/admin';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /** A one-time enrolment invite for the new staff member's phone to scan (Enrol this phone). */
 export function InviteQr({ invite, who }: { invite: Invite; who: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.panel}>
       <Text style={styles.title}>Invite for {who}</Text>
@@ -17,7 +20,8 @@ export function InviteQr({ invite, who }: { invite: Invite; who: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   panel: { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 2, borderRadius: 8, padding: size.pad, gap: 8, alignItems: 'center' },
   title: { color: colors.accent, fontSize: size.button, fontWeight: '700' },
   qr: { width: 260, height: 260, backgroundColor: colors.text, borderRadius: 4 }, // QR needs a light quiet zone

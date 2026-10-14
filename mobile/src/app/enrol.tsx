@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { enrolThisPhone, INVITE_PREFIX } from '@/lib/session';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /**
  * Enrol this phone with the one-time invite an admin created
@@ -11,6 +11,8 @@ import { colors, size } from '@/lib/theme';
  * Scan the QR, or type the code printed under it.
  */
 export default function Enrol() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [permission, requestPermission] = useCameraPermissions();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -71,7 +73,8 @@ export default function Enrol() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { flex: 1, padding: size.pad, gap: 12 },
   body: { color: colors.text, fontSize: size.body },
   muted: { color: colors.muted, fontSize: 14 },

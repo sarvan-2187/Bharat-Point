@@ -5,7 +5,7 @@ import * as Device from 'expo-device';
 import { api, ApiError, clearSessionToken, getSessionToken, setSessionToken } from './api';
 import { enrolMessage, getDeviceKeyId, loginMessage, newDeviceKey, saveDeviceKey, signWithDeviceKey, signWithSeed } from './device-key';
 
-export type Role = 'AGENT' | 'ADMIN' | 'BANK_OPERATOR';
+export type Role = 'AGENT' | 'ADMIN' | 'BANK_OPERATOR' | 'CUSTOMER';
 
 export interface Me {
   userId: string;
@@ -14,6 +14,7 @@ export interface Me {
   role: Role;
   bankId: string | null;
   agentId: string | null;
+  customerId: string | null;
 }
 
 export const INVITE_PREFIX = 'bharatpoint-invite:';

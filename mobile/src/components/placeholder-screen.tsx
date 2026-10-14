@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 /** Stand-in for a role area until its phase is built. Delete when the last one is gone. */
 export function PlaceholderScreen({ phase, what }: { phase: string; what: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.page}>
       <Text style={styles.title}>Not built yet</Text>
@@ -12,7 +15,8 @@ export function PlaceholderScreen({ phase, what }: { phase: string; what: string
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { flex: 1, padding: size.pad, gap: 8, justifyContent: 'center' },
   title: { color: colors.accent, fontSize: size.title, fontWeight: '700' },
   body: { color: colors.text, fontSize: size.body },

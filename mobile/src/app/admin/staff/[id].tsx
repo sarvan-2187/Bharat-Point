@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/button';
@@ -15,12 +15,14 @@ import {
   type StaffEntry,
 } from '@/lib/admin';
 import { rupees } from '@/lib/counter';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 const wholeRupees = (v: string) => (/^[1-9][0-9]{0,6}$/.test(v) ? Number(v) * 100 : null);
 
 /** One staff member: invite, suspend or reactivate, reset devices; for agents, limits and replenishment. */
 export default function StaffDetail() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [s, setS] = useState<StaffEntry | null>(null);
   const [perTxn, setPerTxn] = useState('');
@@ -192,7 +194,8 @@ export default function StaffDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: size.pad },
   panel: { backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: size.pad, gap: 8 },

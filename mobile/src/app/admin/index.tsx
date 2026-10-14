@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Button } from '@/components/button';
@@ -15,7 +15,7 @@ import {
 } from '@/lib/admin';
 import { rupees } from '@/lib/counter';
 import { loadMe } from '@/lib/session';
-import { colors, size } from '@/lib/theme';
+import { useTheme, type Colors, size } from '@/lib/theme';
 
 const KIND_LABEL = { CASH_DRAWER: 'cash', FLOAT: 'e-float' } as const;
 
@@ -24,6 +24,8 @@ const KIND_LABEL = { CASH_DRAWER: 'cash', FLOAT: 'e-float' } as const;
  * (replenishments someone else requested), and every staff member.
  */
 export default function AdminHome() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [pending, setPending] = useState<Replenishment[]>([]);
   const [staff, setStaff] = useState<StaffEntry[]>([]);
@@ -142,7 +144,8 @@ export default function AdminHome() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
   page: { padding: size.pad, gap: 8 },
   label: { color: colors.muted, fontSize: 14, letterSpacing: 2, marginTop: size.pad },
   body: { color: colors.text, fontSize: size.body },
