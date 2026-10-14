@@ -14,6 +14,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: 'BharatPoint' }} />
+        <Stack.Screen name="enrol" options={{ title: 'Enrol this phone' }} />
         <Stack.Screen name="agent/index" options={{ title: 'Agent ATM' }} />
         <Stack.Screen name="admin/index" options={{ title: 'Admin' }} />
         <Stack.Screen name="bank/index" options={{ title: 'Bank operations' }} />
