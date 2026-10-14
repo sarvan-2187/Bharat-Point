@@ -6,7 +6,7 @@
  */
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { getItem, setItem } from './storage';
 
 const dark = {
   bg: '#0B0F0C',
@@ -60,14 +60,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>('system');
 
   useEffect(() => {
-    SecureStore.getItemAsync(KEY)
+    getItem(KEY)
       .then((v) => (v === 'light' || v === 'dark' || v === 'system' ? setModeState(v) : undefined))
       .catch(() => {}); // a missing preference just means "follow the phone"
   }, []);
 
   const setMode = useCallback((next: Mode) => {
     setModeState(next);
-    SecureStore.setItemAsync(KEY, next).catch(() => {});
+    setItem(KEY, next).catch(() => {});
   }, []);
 
   const value = useMemo<ThemeValue>(() => {

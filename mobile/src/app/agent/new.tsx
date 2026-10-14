@@ -49,6 +49,34 @@ export default function NewTransaction() {
     }
   }
 
+  async function signAndVerifyFace() {
+    if (!chosen || amountRupees === null) return;
+    setBusy(true);
+    setError(null);
+    const input = {
+      txnType,
+      amountMinor: amountRupees * 100,
+      customerId: chosen.customer.customerId,
+      accountLinkId: chosen.account.accountLinkId,
+    };
+    try {
+      const tx = await createTransaction(input);
+      if (tx.txnType !== input.txnType || tx.amountMinor !== input.amountMinor || tx.customerId !== input.customerId) {
+        await cancelTransaction(tx.id);
+        throw new Error('The server recorded a different transaction, so it was cancelled and not signed.');
+      }
+      try {
+        await signTransaction(tx);
+      } catch (e) {
+        Alert.alert('Not finished', `${(e as Error).message}\nYou can continue on the transaction screen.`);
+      }
+      router.replace({ pathname: '/agent/[id]', params: { id: tx.id, autoVerify: '1' } });
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
   async function signAndCall() {
     if (!chosen || amountRupees === null) return;
     setBusy(true);
@@ -147,7 +175,13 @@ export default function NewTransaction() {
               : 'Take the cash first. The customer will be called and must key this amount.'}
           </Text>
           <Button
-            label={amountRupees ? `Sign and call for ${rupees(amountRupees * 100)}` : 'Enter an amount'}
+            label={amountRupees ? `Face Verification · ${rupees(amountRupees * 100)}` : 'Enter an amount'}
+            onPress={signAndVerifyFace}
+            disabled={busy || amountRupees === null}
+          />
+          <Button
+            label={amountRupees ? `Phone Call (IVR) · ${rupees(amountRupees * 100)}` : 'Enter an amount'}
+            kind="secondary"
             onPress={signAndCall}
             disabled={busy || amountRupees === null}
           />

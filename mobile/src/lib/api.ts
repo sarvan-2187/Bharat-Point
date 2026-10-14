@@ -9,15 +9,14 @@
  * so screens switch on failureCode rather than parsing strings. The staff
  * session token lives in expo-secure-store and is sent as a Bearer token.
  */
-import * as SecureStore from 'expo-secure-store';
+import { getItem, setItem, deleteItem, STORE_OPTIONS } from './storage';
 
 const BASE = process.env.EXPO_PUBLIC_API_URL;
 const TOKEN = 'bp.session.token';
-const STORE = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
-export const getSessionToken = () => SecureStore.getItemAsync(TOKEN, STORE);
-export const setSessionToken = (token: string) => SecureStore.setItemAsync(TOKEN, token, STORE);
-export const clearSessionToken = () => SecureStore.deleteItemAsync(TOKEN, STORE);
+export const getSessionToken = () => getItem(TOKEN, STORE_OPTIONS);
+export const setSessionToken = (token: string) => setItem(TOKEN, token, STORE_OPTIONS);
+export const clearSessionToken = () => deleteItem(TOKEN, STORE_OPTIONS);
 
 export class ApiError extends Error {
   constructor(

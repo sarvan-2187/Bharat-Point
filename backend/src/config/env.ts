@@ -39,6 +39,19 @@ export const config = {
   ivrMaxDials: Number(process.env.IVR_MAX_DIALS ?? 2),
   // An IVR answer slower than this is treated as UNKNOWN and asked again later.
   ivrTimeoutMs: Number(process.env.IVR_TIMEOUT_MS ?? 5000),
+  // Didit face verification settings (read dynamically so tests and runtime env updates work)
+  get diditApiKey() {
+    return process.env.DIDIT_API_KEY ?? '';
+  },
+  get diditWorkflowId() {
+    return process.env.DIDIT_WORKFLOW_ID ?? '';
+  },
+  get diditWebhookSecret() {
+    return process.env.DIDIT_WEBHOOK_SECRET ?? '';
+  },
+  get diditCallbackUrl() {
+    return process.env.DIDIT_CALLBACK_URL ?? '';
+  },
 } as const;
 
 /**

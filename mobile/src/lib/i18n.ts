@@ -5,7 +5,7 @@
  * customer's choice is also saved to the server (the IVR call uses it).
  */
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getItem, setItem } from './storage';
 
 export type Lang = 'en' | 'hi' | 'te' | 'ta' | 'ml';
 export const LANGS: { code: Lang; name: string }[] = [
@@ -287,14 +287,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>('en');
 
   useEffect(() => {
-    SecureStore.getItemAsync(KEY)
+    getItem(KEY)
       .then((v) => (v && v in WORDS ? setLangState(v as Lang) : undefined))
       .catch(() => {});
   }, []);
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
-    SecureStore.setItemAsync(KEY, next).catch(() => {});
+    setItem(KEY, next).catch(() => {});
   }, []);
 
   const value = useMemo<I18n>(() => ({ lang, setLang, t: (k) => WORDS[lang][k] }), [lang, setLang]);

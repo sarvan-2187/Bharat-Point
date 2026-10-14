@@ -8,10 +8,11 @@
  *
  * The message strings below must match backend/src/auth/crypto.ts exactly.
  */
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { getRandomBytes } from 'expo-crypto';
 import { ed25519 } from '@noble/curves/ed25519.js';
+import { getItem, setItem, STORE_OPTIONS } from './storage';
 
 export const enrolMessage = (inviteToken: string) => `bharatpoint/enrol/v1\n${inviteToken}`;
 export const loginMessage = (challengeId: string, nonce: string) => `bharatpoint/login/v1\n${challengeId}\n${nonce}`;
@@ -22,7 +23,6 @@ export const cashReturnedMessage = (intentHash: string) => `bharatpoint/cash-ret
 
 const SEED = 'bp.deviceKey.seed';
 const KEY_ID = 'bp.deviceKey.id';
-const STORE = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
 export function toBase64url(bytes: Uint8Array): string {
   let binary = '';
@@ -37,6 +37,7 @@ function fromBase64url(value: string): Uint8Array {
 
 /** Ask the phone's owner to prove presence. Throws with a readable reason if they cannot. */
 async function confirmPresence(reason: string): Promise<void> {
+  if (Platform.OS === 'web') return; // Browser simulated presence
   const result = await LocalAuthentication.authenticateAsync({ promptMessage: reason });
   if (result.success) return;
   if (result.error === 'not_enrolled' || result.error === 'passcode_not_set') {
@@ -52,11 +53,11 @@ export function newDeviceKey() {
 }
 
 export async function saveDeviceKey(seed: Uint8Array, deviceKeyId: string): Promise<void> {
-  await SecureStore.setItemAsync(SEED, toBase64url(seed), STORE);
-  await SecureStore.setItemAsync(KEY_ID, deviceKeyId, STORE);
+  await setItem(SEED, toBase64url(seed), STORE_OPTIONS);
+  await setItem(KEY_ID, deviceKeyId, STORE_OPTIONS);
 }
 
-export const getDeviceKeyId = () => SecureStore.getItemAsync(KEY_ID, STORE);
+export const getDeviceKeyId = () => getItem(KEY_ID, STORE_OPTIONS);
 
 /** Sign with a key held in memory (enrolment, before it is saved). */
 export async function signWithSeed(seed: Uint8Array, message: string, reason: string): Promise<string> {
@@ -66,7 +67,7 @@ export async function signWithSeed(seed: Uint8Array, message: string, reason: st
 
 /** Sign with this phone's saved key. */
 export async function signWithDeviceKey(message: string, reason: string): Promise<string> {
-  const stored = await SecureStore.getItemAsync(SEED, STORE);
+  const stored = await getItem(SEED, STORE_OPTIONS);
   if (!stored) throw new Error('This phone is not enrolled.');
   return signWithSeed(fromBase64url(stored), message, reason);
 }

@@ -18,6 +18,7 @@ import confirmationRoutes from './confirmation/routes';
 import cashRoutes from './cash/routes';
 import customerRoutes from './customers/routes';
 import adminRoutes from './admin/routes';
+import verificationRoutes from './verification/routes';
 
 export function createApp() {
   const app = express();
@@ -32,8 +33,33 @@ export function createApp() {
     }),
     express.static(path.resolve(__dirname, '../console'))
   );
-  app.use(helmet());
-  app.use(express.json({ limit: '16kb' }));
+
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-customer-id, x-signature-v2, x-signature');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
+  app.use(helmet({ crossOriginResourcePolicy: false }));
+  app.use(
+    express.json({
+      limit: '64kb',
+      verify: (req, _res, buf) => {
+        (req as unknown as { rawBody?: Buffer }).rawBody = buf;
+      },
+    })
+  );
 
   app.get('/health', async (_req, res) => {
     try {
@@ -44,8 +70,23 @@ export function createApp() {
     }
   });
 
+  // Didit verification and mock transaction endpoints available at /api and /api/v1
+  app.use('/api', authenticate, verificationRoutes);
+
   // Every /api/v1 route sees req.auth (or not); each declares its own requireRole.
-  app.use('/api/v1', authenticate, authRoutes, staffRoutes, transactionRoutes, providerRoutes, confirmationRoutes, cashRoutes, customerRoutes, adminRoutes);
+  app.use(
+    '/api/v1',
+    authenticate,
+    authRoutes,
+    staffRoutes,
+    transactionRoutes,
+    providerRoutes,
+    confirmationRoutes,
+    cashRoutes,
+    customerRoutes,
+    adminRoutes,
+    verificationRoutes
+  );
 
   app.use(errorHandler);
   return app;
