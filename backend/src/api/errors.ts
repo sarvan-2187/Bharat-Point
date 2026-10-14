@@ -21,11 +21,16 @@ export class AppError extends Error {
 }
 
 export const FAILURES = {
+  VALIDATION_FAILED: [400, 'The request is missing or has an invalid field.'],
   AUTH_FAILED: [401, 'Authentication failed.'],
   FORBIDDEN: [403, 'You do not have access to this.'],
   NOT_FOUND: [404, 'Not found.'],
+  ALREADY_EXISTS: [409, 'That already exists.'],
   INTERNAL_ERROR: [500, 'Internal server error.'],
 } as const;
+
+/** Postgres unique_violation, for turning a duplicate into a 409 instead of a 500. */
+export const isUniqueViolation = (err: unknown) => (err as { code?: string })?.code === '23505';
 
 export type FailureCode = keyof typeof FAILURES;
 

@@ -1,0 +1,34 @@
+/**
+ * The Express app, without listening, so tests can start it on a random port.
+ *
+ * Express 5 forwards rejected promises from async handlers to the error
+ * handler on its own, so PRISM's wrap() helper is not needed here.
+ */
+import express from 'express';
+import helmet from 'helmet';
+import pool from './db/pool';
+import { errorHandler } from './api/errors';
+import { authenticate } from './auth/middleware';
+import authRoutes from './auth/routes';
+import staffRoutes from './staff/routes';
+
+export function createApp() {
+  const app = express();
+  app.use(helmet());
+  app.use(express.json({ limit: '16kb' }));
+
+  app.get('/health', async (_req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({ ok: true, db: 'up' });
+    } catch {
+      res.status(503).json({ ok: false, db: 'down' });
+    }
+  });
+
+  // Every /api/v1 route sees req.auth (or not); each declares its own requireRole.
+  app.use('/api/v1', authenticate, authRoutes, staffRoutes);
+
+  app.use(errorHandler);
+  return app;
+}

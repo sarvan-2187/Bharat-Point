@@ -15,4 +15,6 @@ export const config = {
   // directly from the LAN (audit F-10).
   host: process.env.HOST ?? '127.0.0.1',
   databaseUrl: requireEnv('DATABASE_URL'),
+  // Staff sessions are server-side and revocable; this only bounds a forgotten one.
+  sessionTtlHours: Number(process.env.SESSION_TTL_HOURS ?? 12),
 } as const;

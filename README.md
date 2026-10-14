@@ -32,6 +32,10 @@ npm run db:migrate
 npm test
 npm run dev                        # http://127.0.0.1:4000/health
 
+# first staff member (prints a one-time enrolment QR in the terminal)
+npm run staff:invite -- --role ADMIN --code AD-001 --name "Your name"
+npm run staff:invite -- --role AGENT --code AG-001 --name "Agent name" --location "Village"
+
 cd ../mobile
 cp .env.example .env               # EXPO_PUBLIC_API_URL=http://<laptop LAN IP>:4000
 npm install
@@ -40,3 +44,7 @@ npx expo start                     # scan the QR with Expo Go
 
 For phones to reach the API, set `HOST=0.0.0.0` in the root `.env` and allow TCP 4000 through
 Windows Firewall on **private** networks only. The home screen shows **SERVER: Connected** when it works.
+
+On each staff phone: **Enrol this phone** → scan the invite QR → confirm with fingerprint / screen lock.
+The phone keeps its own signing key; the server stores only the public half. A lost phone is cut off
+with `POST /api/v1/admin/staff/:id/reset-devices` (admin screen in Phase 8), then re-invited.
