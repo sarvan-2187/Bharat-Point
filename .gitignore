@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# Secrets: only the example is committed.
+.env
+.env.*
+!.env.example
+
+# mkcert output contains private keys.
+certs/
+
+*.log
+.DS_Store
+Thumbs.db

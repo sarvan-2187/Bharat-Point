@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "BharatPoint",
+    "slug": "bharatpoint",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "bharatpoint",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

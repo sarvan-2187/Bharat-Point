@@ -1,0 +1,29 @@
+# Data store only, for now.
+#
+# The api and web apps run on the host (`npm run dev`) until the Compose/LAN
+# phase: WebAuthn is bound to a hostname, so that is settled before they are
+# containerised. Redis, Asterisk and the mock bank are added in the phases
+# that need them (see docs/ARCHITECTURE_AUDIT.md §14).
+#
+#   docker compose up -d
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: bharatpoint
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: bharatpoint
+    ports:
+      # Loopback only: never reachable from the LAN (audit F-11).
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bharatpoint -d bharatpoint']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
