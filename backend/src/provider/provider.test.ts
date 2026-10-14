@@ -21,6 +21,7 @@ describe('provider flow against the mock bank', { skip: dbSkip }, () => {
   let tx: typeof import('../transactions/service');
   let provider: typeof import('./service');
   let sweeper: typeof import('./sweeper');
+  let chain: typeof import('../transactions/chain');
   let agent: Staff;
   let bankOp: Staff;
   let lakshmi: Account;
@@ -39,7 +40,11 @@ describe('provider flow against the mock bank', { skip: dbSkip }, () => {
       })
     );
     await h.withTransaction(async (c) => {
+      // The chain stages the real flow writes (agent signature, customer confirmation):
+      // sending to the bank requires both.
+      await chain.appendStep(c, row.id, 'AGENT_SIGNED', { test: true });
       await tx.transition(c, row.id, ['CREATED'], 'AWAITING_CUSTOMER', SYSTEM);
+      await chain.appendStep(c, row.id, 'CUSTOMER_CONFIRMED', { test: true });
       await tx.transition(c, row.id, ['AWAITING_CUSTOMER'], 'CUSTOMER_CONFIRMED', SYSTEM);
     });
     return row.id;
@@ -56,6 +61,7 @@ describe('provider flow against the mock bank', { skip: dbSkip }, () => {
     tx = require('../transactions/service');
     provider = require('./service');
     sweeper = require('./sweeper');
+    chain = require('../transactions/chain');
     agent = await h.signedIn('AGENT');
     bankOp = await h.signedIn('BANK_OPERATOR');
   });
@@ -73,12 +79,12 @@ describe('provider flow against the mock bank', { skip: dbSkip }, () => {
     const req = (await h.pool.query(`SELECT kind, state, request_id FROM provider_requests WHERE transaction_id = $1`, [id])).rows[0];
     assert.deepEqual(req, { kind: 'DEBIT', state: 'APPROVED', request_id: `debit:${id}` });
     const stages = (await h.pool.query(`SELECT stage FROM authorization_steps WHERE transaction_id = $1 ORDER BY seq`, [id])).rows;
-    assert.deepEqual(stages.map((s) => s.stage), ['INTENT_LOCKED', 'PROVIDER_AUTHORIZED']);
+    assert.deepEqual(stages.map((s) => s.stage), ['INTENT_LOCKED', 'AGENT_SIGNED', 'CUSTOMER_CONFIRMED', 'PROVIDER_AUTHORIZED']);
   });
 
-  test('a confirmed cash-in is credited', async () => {
+  test('a confirmed cash-in is credited and completes (the cash was taken before the call)', async () => {
     const id = await confirmed({ txnType: 'CASH_IN', amountMinor: 50_000 });
-    assert.equal(await provider.sendToProvider(id), 'PROVIDER_APPROVED');
+    assert.equal(await provider.sendToProvider(id), 'COMPLETED');
     assert.equal(await h.provider.balance(lakshmi.providerToken), 150_000);
   });
 

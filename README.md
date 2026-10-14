@@ -43,6 +43,9 @@ npm run dev                        # http://127.0.0.1:4000/health
 npm run staff:invite -- --role ADMIN --code AD-001 --name "Your name"
 npm run staff:invite -- --role AGENT --code AG-001 --name "Agent name" --location "Village"
 
+# customer confirmation call on a real phone (IVR_URL + IVR_SHARED_SECRET in .env)
+npm run ivr:try -- --amount 200
+
 cd ../mobile
 cp .env.example .env               # EXPO_PUBLIC_API_URL=http://<laptop LAN IP>:4000
 npm install

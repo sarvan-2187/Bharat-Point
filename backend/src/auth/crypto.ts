@@ -19,6 +19,10 @@ export const enrolMessage = (inviteToken: string) => `bharatpoint/enrol/v1\n${in
 export const loginMessage = (challengeId: string, nonce: string) => `bharatpoint/login/v1\n${challengeId}\n${nonce}`;
 /** The agent signs the transaction's intent hash: "I entered exactly this transaction". */
 export const intentMessage = (intentHash: string) => `bharatpoint/intent/v1\n${intentHash}`;
+/** Cash events at the counter, each signed on the agent's phone over the intent hash. */
+export const handoverMessage = (intentHash: string) => `bharatpoint/handover/v1\n${intentHash}`;
+export const handoverFailedMessage = (intentHash: string) => `bharatpoint/handover-failed/v1\n${intentHash}`;
+export const cashReturnedMessage = (intentHash: string) => `bharatpoint/cash-returned/v1\n${intentHash}`;
 
 /** QR payload for an enrolment invite; the phone's scanner expects this prefix. */
 export const inviteQrPayload = (token: string) => `bharatpoint-invite:${token}`;
