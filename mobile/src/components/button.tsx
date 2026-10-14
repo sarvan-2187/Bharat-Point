@@ -39,10 +39,10 @@ export function Button({
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({
-  base: { borderRadius: size.radius, padding: size.pad, alignItems: 'center', minHeight: 60, justifyContent: 'center' },
+  base: { borderRadius: size.radius, paddingHorizontal: size.pad, paddingVertical: 14, alignItems: 'center', minHeight: 56, justifyContent: 'center' },
   primary: { backgroundColor: colors.accent },
-  secondary: { borderColor: colors.muted, borderWidth: 1.5 },
+  secondary: { backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1 },
   dim: { opacity: 0.5 },
-  primaryLabel: { color: colors.bg, fontSize: size.button, fontWeight: '700' },
+  primaryLabel: { color: colors.bg, fontSize: size.body, fontWeight: '700' },
   secondaryLabel: { color: colors.text, fontSize: size.body, fontWeight: '600' },
 });

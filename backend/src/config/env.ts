@@ -46,12 +46,13 @@ export const config = {
  * configured (confirmation then fails closed: nothing can be confirmed).
  * Read on every call, like isDemoMode.
  */
-export function ivrSettings(): { url: string; secret: string } | null {
+export function ivrSettings(): { url: string; secret: string; kind: 'signed' | 'asterisk' } | null {
   const url = process.env.IVR_URL;
   if (!url) return null;
+  const kind = process.env.IVR_KIND === 'asterisk' ? 'asterisk' : 'signed';
   const secret = process.env.IVR_SHARED_SECRET ?? '';
-  if (secret.length < 32) throw new Error('IVR_SHARED_SECRET must be at least 32 characters when IVR_URL is set');
-  return { url: url.replace(/\/+$/, ''), secret };
+  if (kind === 'signed' && secret.length < 32) throw new Error('IVR_SHARED_SECRET must be at least 32 characters when IVR_URL is set');
+  return { url: url.replace(/\/+$/, ''), secret, kind };
 }
 
 /**

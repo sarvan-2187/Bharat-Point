@@ -11,11 +11,14 @@
  * itself and the database refuses an approval whose amount differs.
  */
 import { config } from '../config/env';
+import * as asterisk from './asterisk';
 import { nowSeconds, replySignature, requestSignature, signatureValid } from './signing';
 
 export interface IvrSettings {
   url: string;
   secret: string;
+  /** 'asterisk': the plain voice-approval API (see asterisk.ts). Default: the signed BharatPoint protocol. */
+  kind?: 'signed' | 'asterisk';
 }
 
 export interface IvrRecord {
@@ -23,6 +26,8 @@ export interface IvrRecord {
   status: 'QUEUED' | 'RINGING' | 'IN_PROGRESS' | 'COMPLETED' | 'NO_ANSWER' | 'FAILED';
   decision: 'ACCEPTED' | 'DECLINED' | 'MISMATCH' | 'INVALID_INPUT' | 'NONE';
   keyedRupees: number | null;
+  /** The four digits the customer keyed, only when the request had pinRequired. Never stored. */
+  keyedPin?: string | null;
   completedAt: string | null;
 }
 
@@ -30,8 +35,12 @@ export interface StartCallPayload {
   callId: string;
   extension: string;
   mode: 'BLIND_ENTRY' | 'READBACK';
+  /** CONFIRM (default): this call authorises a payment. VERIFY: a callback asking "did you make this?"; the IVR must word it that way. */
+  purpose?: 'CONFIRM' | 'VERIFY';
   txnType: 'CASH_IN' | 'CASH_OUT';
   amountRupees: number;
+  /** True: ask for the customer's 4-digit PIN (before the amount) and return it as keyedPin. */
+  pinRequired: boolean;
   agentLabel: string;
   language: string;
   ringTimeoutSeconds: number;
@@ -82,6 +91,7 @@ const unknown = (err: unknown): IvrOutcome => ({
 
 /** Ask the IVR to place the call. The same callId again never places a second call (IVR contract). */
 export async function startCall(s: IvrSettings, payload: StartCallPayload): Promise<IvrOutcome> {
+  if (s.kind === 'asterisk') return asterisk.startCall(s, payload);
   let res;
   try {
     res = await ivrFetch(s, 'POST', '/api/call', payload);
@@ -93,6 +103,7 @@ export async function startCall(s: IvrSettings, payload: StartCallPayload): Prom
 }
 
 export async function getDecision(s: IvrSettings, callId: string): Promise<IvrOutcome> {
+  if (s.kind === 'asterisk') return asterisk.getDecision(s, callId);
   let res;
   try {
     res = await ivrFetch(s, 'GET', `/api/decision/${callId}`);

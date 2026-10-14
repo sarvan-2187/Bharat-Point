@@ -297,12 +297,31 @@ export async function cancelTransaction(c: PoolClient, auth: Auth, txId: string)
   await audit(c, 'TRANSACTION_CANCELLED', { actorUserId: auth.userId, transactionId: tx.id });
 }
 
+/**
+ * The customer says "this wasn't me" about one of their own transactions (an
+ * agent who answers the confirmation call on the customer's phone is the case
+ * this exists for). Allowed in any state, once, and it cannot be taken back.
+ * It does not move money; it puts the transaction on the admin's alert board.
+ */
+export async function reportTransaction(c: PoolClient, auth: Auth, txId: string, note: string | null): Promise<void> {
+  const tx = (await c.query<TxRow>(`SELECT * FROM transactions WHERE id = $1`, [txId])).rows[0];
+  if (!tx || tx.customer_id !== auth.customerId) fail('NOT_FOUND');
+  try {
+    await c.query(`INSERT INTO transaction_disputes (transaction_id, customer_id, note) VALUES ($1, $2, $3)`, [tx.id, tx.customer_id, note]);
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') fail('ALREADY_EXISTS', { reason: 'already reported' });
+    throw err;
+  }
+  await audit(c, 'TRANSACTION_DISPUTED', { actorUserId: auth.userId, transactionId: tx.id, data: { agentId: tx.agent_id } });
+}
+
 // ── Reading ──────────────────────────────────────────────────────────────
 
 export interface TxViewRow extends TxRow {
   customer_name: string;
   masked_label: string;
   agent_signed: boolean;
+  disputed: boolean;
   confirmation: {
     status: string;
     channel: string;
@@ -316,6 +335,7 @@ export interface TxViewRow extends TxRow {
 const VIEW_SELECT = `SELECT t.*, c.display_name AS customer_name, l.masked_label,
             EXISTS (SELECT 1 FROM authorization_steps s
                      WHERE s.transaction_id = t.id AND s.stage = 'AGENT_SIGNED') AS agent_signed,
+            EXISTS (SELECT 1 FROM transaction_disputes d WHERE d.transaction_id = t.id) AS disputed,
             (SELECT json_build_object(
                       'status', a.status, 'channel', a.channel, 'mode', a.mode, 'expiresAt', a.expires_at,
                       'dial', ca.dial, 'callState', ca.state)
@@ -367,6 +387,7 @@ export const present = (tx: TxViewRow) => ({
   accountLabel: tx.masked_label,
   intentHash: tx.intent_hash,
   agentSigned: tx.agent_signed,
+  disputed: tx.disputed,
   createdAt: tx.created_at,
   expiresAt: tx.expires_at,
   supersededBy: tx.superseded_by,

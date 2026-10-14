@@ -6,8 +6,9 @@
 import { Router } from 'express';
 import pool, { withTransaction } from '../db/pool';
 import { fail } from '../api/errors';
-import { uuid } from '../api/validate';
+import { optionalStr, uuid } from '../api/validate';
 import { requireRole } from '../auth/middleware';
+import { assessInBackground } from '../fraud/service';
 import {
   amendTransaction,
   canSee,
@@ -18,6 +19,7 @@ import {
   parseAmount,
   parseNewTransaction,
   present,
+  reportTransaction,
   signIntent,
 } from './service';
 
@@ -28,6 +30,7 @@ const view = async (txId: string) => present((await loadView(pool, txId))!);
 router.post('/transactions', requireRole('AGENT'), async (req, res) => {
   const input = parseNewTransaction(req.body);
   const tx = await withTransaction((c) => createTransaction(c, req.auth!, input));
+  assessInBackground(tx.id); // advisory fraud review for the admin; never delays or changes the payment
   res.status(201).json(await view(tx.id));
 });
 
@@ -41,6 +44,13 @@ router.get('/transactions/:id', requireRole(), async (req, res) => {
   res.json(present(tx));
 });
 
+router.post('/transactions/:id/report', requireRole('CUSTOMER'), async (req, res) => {
+  const txId = uuid(req.params.id, 'id');
+  const note = optionalStr(req.body, 'note', { max: 300 });
+  await withTransaction((c) => reportTransaction(c, req.auth!, txId, note));
+  res.status(204).end();
+});
+
 router.post('/transactions/:id/sign', requireRole('AGENT'), async (req, res) => {
   const txId = uuid(req.params.id, 'id');
   await withTransaction((c) => signIntent(c, req.auth!, txId, req.body?.signature));
@@ -51,6 +61,7 @@ router.post('/transactions/:id/amend', requireRole('AGENT'), async (req, res) =>
   const txId = uuid(req.params.id, 'id');
   const amountMinor = parseAmount(req.body?.amountMinor);
   const replacement = await withTransaction((c) => amendTransaction(c, req.auth!, txId, amountMinor));
+  assessInBackground(replacement.id);
   res.status(201).json(await view(replacement.id));
 });
 

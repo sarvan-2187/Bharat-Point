@@ -21,8 +21,15 @@ export function tenDigits(raw: string): string | null {
   return /^(?:\+?91|0)?([6-9]\d{9})$/.exec(raw.replace(/[\s-]/g, ''))?.[1] ?? null;
 }
 
+/** The same easy-PIN rule as the server (all one digit, or counting up or down). */
+export function isWeakPin(pin: string): boolean {
+  const d = [...pin].map(Number);
+  return d.every((x) => x === d[0]) || d.every((x, i) => i === 0 || x - d[i - 1]! === 1) || d.every((x, i) => i === 0 || d[i - 1]! - x === 1);
+}
+
 export async function signUpCustomer(input: {
   displayName: string;
+  pin: string;
   phone: string;
   bankCode: string;
   language: Lang;
@@ -39,6 +46,7 @@ export async function signUpCustomer(input: {
       phone,
       bankCode: input.bankCode,
       language: input.language,
+      pin: input.pin,
       sipExtension: input.sipExtension.trim() || undefined,
       publicKey: key.publicKey,
       signature,
@@ -48,6 +56,13 @@ export async function signUpCustomer(input: {
   await saveDeviceKey(key.seed, deviceKeyId);
   await signIn();
 }
+
+/** "This wasn't me": tell the admin a transaction on my account was not mine. */
+export const reportTransaction = (id: string) =>
+  api(`/api/v1/transactions/${id}/report`, { method: 'POST', body: JSON.stringify({}) });
+
+export const raiseSupportTicket = (message: string) =>
+  api('/api/v1/me/support', { method: 'POST', body: JSON.stringify({ message }) });
 
 /** Save the signed-in customer's language on the server (the IVR call speaks it). */
 export const saveLanguage = (language: Lang) =>

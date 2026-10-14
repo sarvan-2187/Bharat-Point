@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BharatPoint Admin Console</title>
+  <link rel="stylesheet" href="console.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">₹</span>
+      <div>
+        <h1>BharatPoint</h1>
+        <p>Admin console</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <span id="live" class="live" role="status"><span class="dot"></span><span id="live-text">Connecting…</span></span>
+      <button id="theme" class="ghost" type="button" aria-label="Change colour theme">Theme: auto</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="notice" class="notice" hidden></div>
+
+    <section class="cards" aria-label="Today at a glance" id="cards"></section>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="live" aria-selected="true">Live payments</button>
+      <button class="tab" role="tab" data-tab="tickets" aria-selected="false">Tickets <span id="tickets-count" class="badge" hidden></span></button>
+      <button class="tab" role="tab" data-tab="fraud" aria-selected="false">Fraud review <span id="fraud-count" class="badge" hidden></span></button>
+      <button class="tab" role="tab" data-tab="alerts" aria-selected="false">Alerts <span id="alerts-count" class="badge" hidden></span></button>
+    </nav>
+
+    <div class="layout">
+      <section id="panel-live" class="panel" role="tabpanel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>Amount</th><th>Who</th><th>Progress</th><th>Status</th><th>Risk</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <p id="empty" class="muted pad" hidden>No payments yet. They appear here the moment an agent starts one.</p>
+        </div>
+      </section>
+
+      <section id="panel-tickets" class="panel" role="tabpanel" hidden>
+        <div id="tickets" class="stack"></div>
+        <p id="tickets-empty" class="muted pad" hidden>No tickets. Customer reports, wrong PINs and payments the system could not settle open one automatically.</p>
+      </section>
+
+      <section id="panel-fraud" class="panel" role="tabpanel" hidden>
+        <div id="fraud-info" class="pad"></div>
+        <div id="fraud" class="stack"></div>
+        <p id="fraud-empty" class="muted pad" hidden>No payments to review yet. Every new payment gets an assessment here, even when no score is possible.</p>
+      </section>
+
+      <section id="panel-alerts" class="panel" role="tabpanel" hidden>
+        <div id="alerts" class="stack"></div>
+        <p id="alerts-empty" class="muted pad" hidden>Nothing needs attention.</p>
+      </section>
+
+      <aside id="detail" class="detail" hidden aria-label="Payment timeline">
+        <div class="detail-head">
+          <h2 id="detail-title">Payment</h2>
+          <button id="detail-close" class="ghost" type="button" aria-label="Close timeline">Close</button>
+        </div>
+        <div id="detail-body"></div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="console.js"></script>
+</body>
+</html>

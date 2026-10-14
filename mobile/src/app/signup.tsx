@@ -3,7 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { Stack, router } from 'expo-router';
 import { Button } from '@/components/button';
 import { Segmented } from '@/components/segmented';
-import { listBanks, signUpCustomer, tenDigits, type Bank } from '@/lib/customer';
+import { isWeakPin, listBanks, signUpCustomer, tenDigits, type Bank } from '@/lib/customer';
 import { LANGS, useI18n } from '@/lib/i18n';
 import { useTheme, type Colors, size } from '@/lib/theme';
 
@@ -15,6 +15,8 @@ export default function SignUp() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [ext, setExt] = useState('');
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
   const [bank, setBank] = useState<string | null>(null);
   const [banks, setBanks] = useState<Bank[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,14 +31,17 @@ export default function SignUp() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  const ready = name.trim().length >= 2 && tenDigits(phone) !== null && bank !== null && (ext === '' || /^[0-9]{3,6}$/.test(ext));
+  const pinOk = /^[0-9]{4}$/.test(pin);
+  const pinProblem = pinOk && isWeakPin(pin) ? t('pin_weak') : pin2.length === 4 && pin !== pin2 ? t('pin_mismatch') : null;
+  const ready =
+    name.trim().length >= 2 && tenDigits(phone) !== null && bank !== null && (ext === '' || /^[0-9]{3,6}$/.test(ext)) && pinOk && pin === pin2 && !isWeakPin(pin);
 
   async function submit() {
     if (!ready || !bank) return;
     setBusy(true);
     setError(null);
     try {
-      await signUpCustomer({ displayName: name, phone, bankCode: bank, language: lang, sipExtension: ext });
+      await signUpCustomer({ displayName: name, phone, bankCode: bank, language: lang, pin, sipExtension: ext });
       router.replace('/');
     } catch (e) {
       setError((e as Error).message);
@@ -90,6 +95,32 @@ export default function SignUp() {
             <Text style={[styles.bankLabel, bank === b.code && { color: colors.accent }]}>{b.displayName}</Text>
           </Pressable>
         ))}
+
+        <Text style={styles.label}>{t('pin')}</Text>
+        <TextInput
+          style={styles.input}
+          value={pin}
+          onChangeText={(v) => setPin(v.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+          secureTextEntry
+          maxLength={4}
+          autoComplete="off"
+          importantForAutofill="no"
+          placeholderTextColor={colors.muted}
+        />
+        <Text style={styles.label}>{t('pin_again')}</Text>
+        <TextInput
+          style={styles.input}
+          value={pin2}
+          onChangeText={(v) => setPin2(v.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+          secureTextEntry
+          maxLength={4}
+          autoComplete="off"
+          importantForAutofill="no"
+          placeholderTextColor={colors.muted}
+        />
+        <Text style={pinProblem ? styles.error : styles.note}>{pinProblem ?? t('pin_hint')}</Text>
 
         <Text style={styles.label}>{t('ext')}</Text>
         <TextInput

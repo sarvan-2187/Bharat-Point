@@ -23,6 +23,7 @@ import { config, ivrSettings } from '../config/env';
 import type { Auth } from '../auth/middleware';
 import { appendStep, canonicalJson, hasStage } from '../transactions/chain';
 import { hashesMatch } from '../transactions/intent';
+import { MAX_PIN_FAILURES, PIN_LOCK_MINUTES, pinMatches } from '../customers/pin';
 import { transition, type Actor, type TxRow } from '../transactions/service';
 import * as ivr from './client';
 
@@ -64,8 +65,8 @@ export function bindingHash(tx: TxRow, authorizationId: string, expiresAt: Date)
 /** What the IVR needs to place one dial. */
 async function callPayload(c: PoolClient, tx: TxRow, authorizationId: string, dial: number): Promise<ivr.StartCallPayload> {
   const row = (
-    await c.query<{ sip_extension: string; mode: 'BLIND_ENTRY' | 'READBACK'; preferred_language: string; agent_label: string }>(
-      `SELECT cu.sip_extension, a.mode, cu.preferred_language,
+    await c.query<{ sip_extension: string; mode: 'BLIND_ENTRY' | 'READBACK'; preferred_language: string; agent_label: string; pin_required: boolean }>(
+      `SELECT cu.sip_extension, a.mode, cu.preferred_language, cu.pin_hash IS NOT NULL AS pin_required,
               u.display_name || ', ' || ag.location_name AS agent_label
          FROM transaction_authorizations a
          JOIN customers cu ON cu.id = $2
@@ -81,6 +82,7 @@ async function callPayload(c: PoolClient, tx: TxRow, authorizationId: string, di
     mode: row.mode,
     txnType: tx.txn_type,
     amountRupees: Number(tx.amount_minor) / 100,
+    pinRequired: row.pin_required,
     agentLabel: row.agent_label,
     language: row.preferred_language,
     ringTimeoutSeconds: RING_TIMEOUT_SECONDS,
@@ -108,12 +110,15 @@ export async function startConfirmation(auth: Auth, txId: string): Promise<void>
       fail('CONFIRMATION_UNAVAILABLE', { reason: 'the agent has not signed this transaction' });
     }
     const customer = (
-      await c.query<{ sip_extension: string | null; confirmation_mode: 'BLIND_ENTRY' | 'READBACK' }>(
-        `SELECT sip_extension, confirmation_mode FROM customers WHERE id = $1`,
+      await c.query<{ sip_extension: string | null; confirmation_mode: 'BLIND_ENTRY' | 'READBACK'; pin_locked_until: Date | null }>(
+        `SELECT sip_extension, confirmation_mode, pin_locked_until FROM customers WHERE id = $1`,
         [tx.customer_id]
       )
     ).rows[0]!;
     if (!customer.sip_extension) fail('CONFIRMATION_UNAVAILABLE', { reason: 'the customer has no phone extension' });
+    if (customer.pin_locked_until && customer.pin_locked_until.getTime() > Date.now()) {
+      fail('CONFIRMATION_UNAVAILABLE', { reason: 'too many wrong PINs for this customer; confirmation is locked for a while' });
+    }
 
     // An agent must not be able to call-bomb a customer by amending repeatedly.
     const recent = (
@@ -217,7 +222,8 @@ export async function applyRecord(
     await c.query(
       `UPDATE call_attempts SET state = $2, decision = $3, keyed_minor = $4, reply = $5
         WHERE id = $1 AND state <> ALL($6)`,
-      [attemptId, attemptStateOf(r.status), r.decision, keyed, JSON.stringify({ record: r, signature: outcome.signature }), FINAL_ATTEMPT_STATES]
+      // The PIN is never written down: not in the evidence row, the chain or the audit log.
+      [attemptId, attemptStateOf(r.status), r.decision, keyed, JSON.stringify({ record: { ...r, keyedPin: undefined }, signature: outcome.signature }), FINAL_ATTEMPT_STATES]
     );
     if (!['COMPLETED', 'NO_ANSWER', 'FAILED'].includes(r.status)) return null; // call still under way
 
@@ -245,6 +251,38 @@ export async function applyRecord(
         decision = keyed === null ? 'INVALID_INPUT' : 'MISMATCH';
       }
       if (decision === 'MISMATCH' && keyed === null) decision = 'INVALID_INPUT';
+
+      // A customer with a PIN must have keyed it: this is what an agent holding the phone cannot do.
+      if (decision === 'ACCEPTED') {
+        const pin = (
+          await c.query<{ pin_hash: string | null; pin_failures: number }>(
+            `SELECT pin_hash, pin_failures FROM customers WHERE id = $1 FOR UPDATE`,
+            [tx.customer_id]
+          )
+        ).rows[0]!;
+        if (pin.pin_hash) {
+          if (typeof r.keyedPin !== 'string' || !/^[0-9]{4}$/.test(r.keyedPin)) {
+            decision = 'INVALID_INPUT'; // no PIN keyed: fail closed, but a fumble is not a guess
+          } else if (!pinMatches(r.keyedPin, pin.pin_hash)) {
+            await decide('REJECTED', null);
+            await transition(c, tx.id, ['AWAITING_CUSTOMER'], 'REJECTED', CUSTOMER, {
+              failureCode: 'WRONG_PIN',
+              detail: { callId: attempt.call_id },
+            });
+            await c.query(
+              `UPDATE customers
+                  SET pin_failures = CASE WHEN pin_failures + 1 >= $2 THEN 0 ELSE pin_failures + 1 END,
+                      pin_locked_until = CASE WHEN pin_failures + 1 >= $2 THEN NOW() + make_interval(mins => $3) ELSE pin_locked_until END
+                WHERE id = $1`,
+              [tx.customer_id, MAX_PIN_FAILURES, PIN_LOCK_MINUTES]
+            );
+            await audit(c, 'PIN_FAILED', { transactionId: tx.id, data: { agentId: tx.agent_id, callId: attempt.call_id } });
+            return null;
+          } else if (pin.pin_failures > 0) {
+            await c.query(`UPDATE customers SET pin_failures = 0 WHERE id = $1`, [tx.customer_id]);
+          }
+        }
+      }
 
       if (decision === 'ACCEPTED') {
         const keyedMinor = authz.mode === 'BLIND_ENTRY' ? keyed : null;

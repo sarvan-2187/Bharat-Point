@@ -45,14 +45,27 @@ export interface NewCustomer {
   bankId: string;
   providerToken: string; // the account as the bank knows it
   maskedLabel: string;
+  /** Optional profile attributes the fraud model needs; without them its assessment is INCOMPLETE. */
+  dateOfBirth?: string | null; // YYYY-MM-DD
+  gender?: string | null;
+  location?: string | null;
 }
 
 export async function createCustomer(c: PoolClient, input: NewCustomer) {
   const customer = (
     await c.query<{ id: string }>(
-      `INSERT INTO customers (display_name, phone_enc, phone_lookup, sip_extension, confirmation_mode)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [input.displayName, encryptPhone(input.phone), phoneLookup(input.phone), input.sipExtension, input.mode]
+      `INSERT INTO customers (display_name, phone_enc, phone_lookup, sip_extension, confirmation_mode, date_of_birth, gender, location)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [
+        input.displayName,
+        encryptPhone(input.phone),
+        phoneLookup(input.phone),
+        input.sipExtension,
+        input.mode,
+        input.dateOfBirth ?? null,
+        input.gender ?? null,
+        input.location ?? null,
+      ]
     )
   ).rows[0]!;
   const link = (

@@ -17,7 +17,7 @@ const dark = {
   ok: '#4ADE80',
   warn: '#FBBF24',
   danger: '#F87171',
-  border: '#34493B',
+  border: '#2A3B30',
 };
 
 const light: typeof dark = {
@@ -29,7 +29,7 @@ const light: typeof dark = {
   ok: '#15803D',
   warn: '#A16207',
   danger: '#B91C1C',
-  border: '#B9C9BD',
+  border: '#D3DED6',
 };
 
 export type Colors = typeof dark;
@@ -41,7 +41,7 @@ export const size = {
   title: 28,
   button: 22,
   pad: 16,
-  radius: 12,
+  radius: 16,
 } as const;
 
 const KEY = 'bp.theme.mode';

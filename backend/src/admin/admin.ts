@@ -95,6 +95,26 @@ export async function alerts(q: Q): Promise<Alert[]> {
           AND t.created_at >= date_trunc('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata'
         GROUP BY ag.agent_code HAVING COUNT(*) >= 2
        UNION ALL
+       SELECT 'CUSTOMER_REPORTED', 'HIGH', ag.agent_code, t.id, COALESCE(d.note, 'Customer says this was not them'), d.created_at
+         FROM transaction_disputes d
+         JOIN transactions t ON t.id = d.transaction_id
+         JOIN agents ag      ON ag.id = t.agent_id
+        WHERE d.created_at > NOW() - interval '30 days'
+          AND NOT EXISTS (SELECT 1 FROM tickets k WHERE k.kind = 'CUSTOMER_REPORT' AND k.transaction_id = t.id AND k.status = 'RESOLVED')
+       UNION ALL
+       SELECT 'FRAUD_FLAGGED', 'HIGH', ag.agent_code, t.id,
+              'High fraud risk (' || round(f.probability * 100) || '%) on ' || (t.amount_minor / 100) || ' rupees', f.created_at
+         FROM fraud_assessments f
+         JOIN transactions t ON t.id = f.transaction_id
+         JOIN agents ag      ON ag.id = t.agent_id
+        WHERE f.category = 'HIGH' AND f.review_status = 'PENDING' AND f.created_at > NOW() - interval '7 days'
+       UNION ALL
+       SELECT 'PIN_GUESSING', 'HIGH', ag.agent_code, NULL, COUNT(*) || ' wrong PINs today', MAX(t.updated_at)
+         FROM transactions t JOIN agents ag ON ag.id = t.agent_id
+        WHERE t.failure_code = 'WRONG_PIN'
+          AND t.created_at >= date_trunc('day', NOW() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata'
+        GROUP BY ag.agent_code HAVING COUNT(*) >= 2
+       UNION ALL
        SELECT 'NEGATIVE_DRAWER', 'MEDIUM', a.agent_code, NULL, 'Drawer at ' || (${balanceSql('CASH_DRAWER')} / 100) || ' rupees', NOW()
          FROM agents a
         WHERE ${balanceSql('CASH_DRAWER')} < 0

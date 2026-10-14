@@ -59,6 +59,7 @@ export const ALERT_TEXT: Record<string, string> = {
   RECONCILIATION_REQUIRED: 'Needs a manual check',
   STUCK: 'Stuck waiting',
   AMOUNT_MISMATCHES: 'Repeated amount mismatches',
+  CUSTOMER_REPORTED: 'Customer says this was not them',
   NEGATIVE_DRAWER: 'Drawer below zero: replenish or check',
 };
 

@@ -79,6 +79,20 @@ export async function inquire(requestId: string): Promise<Outcome> {
   return { kind: 'UNKNOWN', reason: `HTTP_${res.status}` };
 }
 
+/**
+ * The customer's balance at the (mock) bank in paise, or null if the bank does not answer
+ * clearly. Read-only; used only as a fraud-review input, never as a payment decision.
+ */
+export async function getBalance(accountToken: string): Promise<number | null> {
+  try {
+    const res = await bankFetch('GET', `/v1/accounts/${encodeURIComponent(accountToken)}`);
+    const balance = (res.body as { balanceMinor?: unknown } | null)?.balanceMinor;
+    return res.status === 200 && typeof balance === 'number' && Number.isSafeInteger(balance) && balance >= 0 ? balance : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Demo fault injection (mock bank only) ─────────────────────────────────
 
 export async function getFault(): Promise<unknown> {

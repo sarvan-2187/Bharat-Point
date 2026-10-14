@@ -10,7 +10,7 @@ import http from 'node:http';
 import { nowSeconds, replySignature, requestSignature, signatureValid } from '../confirmation/signing';
 
 export type FakeOutcome =
-  | { decision: 'ACCEPTED' | 'MISMATCH'; keyedRupees: number; pendingPolls?: number; badSignature?: boolean }
+  | { decision: 'ACCEPTED' | 'MISMATCH'; keyedRupees: number; keyedPin?: string; pendingPolls?: number; badSignature?: boolean }
   | { decision: 'DECLINED' | 'INVALID_INPUT'; pendingPolls?: number; badSignature?: boolean }
   | { status: 'NO_ANSWER' | 'FAILED'; pendingPolls?: number }
   | { unreachable: true }; // the next POST fails with 500 and nothing is recorded
@@ -25,10 +25,10 @@ interface CallRecord {
 export async function startFakeIvr(secret: string) {
   const scripts = new Map<string, FakeOutcome[]>();
   const records = new Map<string, CallRecord>();
-  const posts: { callId: string; extension: string; created: boolean }[] = [];
+  const posts: { callId: string; extension: string; created: boolean; pinRequired?: boolean; mode?: string }[] = [];
 
   const view = (rec: CallRecord) => {
-    const base = { callId: rec.callId, keyedRupees: null as number | null, completedAt: null as string | null };
+    const base = { callId: rec.callId, keyedRupees: null as number | null, keyedPin: null as string | null, completedAt: null as string | null };
     if (!rec.outcome) return { ...base, status: 'RINGING', decision: 'NONE' };
     if (rec.pollsLeft > 0) {
       rec.pollsLeft -= 1;
@@ -37,7 +37,8 @@ export async function startFakeIvr(secret: string) {
     const completedAt = new Date().toISOString();
     if ('status' in rec.outcome) return { ...base, status: rec.outcome.status, decision: 'NONE', completedAt };
     const keyed = 'keyedRupees' in rec.outcome ? rec.outcome.keyedRupees : null;
-    return { ...base, status: 'COMPLETED', decision: rec.outcome.decision, keyedRupees: keyed, completedAt };
+    const keyedPin = 'keyedPin' in rec.outcome ? (rec.outcome.keyedPin ?? null) : null;
+    return { ...base, status: 'COMPLETED', decision: rec.outcome.decision, keyedRupees: keyed, keyedPin, completedAt };
   };
 
   const reply = (res: http.ServerResponse, status: number, body: unknown, rec?: CallRecord) => {
@@ -65,7 +66,7 @@ export async function startFakeIvr(secret: string) {
       }
 
       if (req.method === 'POST' && path === '/api/call') {
-        const p = JSON.parse(body) as { callId: string; extension: string };
+        const p = JSON.parse(body) as { callId: string; extension: string; pinRequired?: boolean; mode?: string };
         const existing = records.get(p.callId);
         if (existing) {
           posts.push({ callId: p.callId, extension: p.extension, created: false });
@@ -79,7 +80,7 @@ export async function startFakeIvr(secret: string) {
         }
         const rec: CallRecord = { callId: p.callId, extension: p.extension, outcome: next, pollsLeft: next?.pendingPolls ?? 0 };
         records.set(p.callId, rec);
-        posts.push({ callId: p.callId, extension: p.extension, created: true });
+        posts.push({ callId: p.callId, extension: p.extension, created: true, pinRequired: p.pinRequired, mode: p.mode });
         return reply(res, 202, { callId: p.callId, status: 'QUEUED', decision: 'NONE', keyedRupees: null, completedAt: null }, rec);
       }
 

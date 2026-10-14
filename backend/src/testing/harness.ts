@@ -79,6 +79,12 @@ export async function startHarness() {
   const customers: typeof import('../customers/customers') = require('../customers/customers');
   const { createApp }: typeof import('../app') = require('../app');
   const pool = poolModule.default;
+  // Safety: the pool reads its URL when config/env is first imported. A test file that imports
+  // anything touching config BEFORE startHarness() would silently run against the real database.
+  const connectedTo = (await pool.query<{ db: string }>(`SELECT current_database() AS db`)).rows[0]!.db;
+  if (connectedTo !== dbName) {
+    throw new Error(`test harness is connected to "${connectedTo}", not its own "${dbName}": import config-dependent modules inside tests, after startHarness()`);
+  }
   await migrate(pool, () => {});
 
   const server: Server = createApp().listen(0, '127.0.0.1');

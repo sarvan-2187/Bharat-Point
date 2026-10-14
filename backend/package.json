@@ -9,6 +9,7 @@
     "start": "node --env-file=../.env dist/index.js",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=../.env src/db/migrate.ts",
+    "admin:console": "tsx --env-file=../.env src/admin/cli.ts",
     "staff:invite": "tsx --env-file=../.env src/staff/cli.ts",
     "ivr:try": "tsx --env-file=../.env src/confirmation/cli.ts",
     "customers:seed": "tsx --env-file=../.env src/customers/cli.ts",

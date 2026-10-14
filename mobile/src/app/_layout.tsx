@@ -10,7 +10,8 @@ function Screens() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.panel },
+          headerStyle: { backgroundColor: colors.bg },
+          headerShadowVisible: false,
           headerTintColor: colors.accent,
           headerTitleStyle: { color: colors.text },
           contentStyle: { backgroundColor: colors.bg },

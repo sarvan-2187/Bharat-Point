@@ -17,8 +17,9 @@ import { optionalStr, str } from '../api/validate';
 import { config, isDemoMode } from '../config/env';
 import { enrolMessage, fromBase64url, verifyEd25519 } from '../auth/crypto';
 import { createCustomer, normalizePhone } from './customers';
+import { hashPin, parsePin } from './pin';
 
-export const LANGUAGES = ['en', 'hi', 'te'] as const;
+export const LANGUAGES = ['en', 'hi', 'te', 'ta', 'ml'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export function parseLanguage(value: unknown): Language {
@@ -34,8 +35,16 @@ export async function signUp(body: Record<string, unknown> | undefined): Promise
   const phone = normalizePhone(body?.phone);
   const bankCode = str(body, 'bankCode', { max: 20, pattern: /^[A-Z0-9-]+$/ });
   const language = parseLanguage(body?.language ?? 'en');
+  const pinHash = hashPin(parsePin(body?.pin));
   const sipExtension = optionalStr(body, 'sipExtension', { max: 6, pattern: /^[0-9]{3,6}$/ });
   const label = optionalStr(body, 'label', { max: 60 });
+  // Optional profile attributes for the fraud review; the app does not collect them yet.
+  const dateOfBirth = optionalStr(body, 'dateOfBirth', { max: 10, pattern: /^\d{4}-\d{2}-\d{2}$/ });
+  if (dateOfBirth && (Number.isNaN(Date.parse(dateOfBirth)) || new Date(dateOfBirth).toISOString().slice(0, 10) !== dateOfBirth)) {
+    fail('VALIDATION_FAILED', { field: 'dateOfBirth' });
+  }
+  const gender = optionalStr(body, 'gender', { max: 20 });
+  const location = optionalStr(body, 'location', { max: 80 });
   const publicKey = fromBase64url(body?.publicKey);
   const signature = fromBase64url(body?.signature);
   if (!publicKey || publicKey.length !== 32) fail('VALIDATION_FAILED', { field: 'publicKey' });
@@ -70,8 +79,8 @@ export async function signUp(body: Record<string, unknown> | undefined): Promise
           [`CU-${crypto.randomBytes(5).toString('hex').toUpperCase()}`, displayName]
         )
       ).rows[0]!;
-      const { customerId } = await createCustomer(c, { displayName, phone, sipExtension, mode: 'BLIND_ENTRY', bankId: bank.id, providerToken, maskedLabel });
-      await c.query(`UPDATE customers SET user_id = $2, preferred_language = $3 WHERE id = $1`, [customerId, user.id, language]);
+      const { customerId } = await createCustomer(c, { displayName, phone, sipExtension, mode: 'BLIND_ENTRY', bankId: bank.id, providerToken, maskedLabel, dateOfBirth, gender, location });
+      await c.query(`UPDATE customers SET user_id = $2, preferred_language = $3, pin_hash = $4 WHERE id = $1`, [customerId, user.id, language, pinHash]);
       const key = (
         await c.query<{ id: string }>(`INSERT INTO device_keys (user_id, public_key, label) VALUES ($1, $2, $3) RETURNING id`, [user.id, publicKey, label])
       ).rows[0]!;

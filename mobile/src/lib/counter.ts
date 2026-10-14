@@ -36,6 +36,7 @@ export interface Tx {
   accountLabel: string;
   intentHash: string;
   agentSigned: boolean;
+  disputed: boolean;
   createdAt: string;
   expiresAt: string;
   supersededBy: string | null;

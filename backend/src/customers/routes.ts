@@ -6,6 +6,7 @@ import pool, { withTransaction } from '../db/pool';
 import { parseLanguage, signUp } from './signup';
 import { audit } from '../db/audit';
 import { requireRole } from '../auth/middleware';
+import { str } from '../api/validate';
 import { findByPhone, normalizePhone } from './customers';
 
 const router = Router();
@@ -44,6 +45,16 @@ router.put('/me/preferences', requireRole('CUSTOMER'), async (req, res) => {
     await audit(c, 'CUSTOMER_LANGUAGE_SET', { actorUserId: req.auth!.userId, data: { language } });
   });
   res.json({ language });
+});
+
+// ponytail: no rate limit; add one per customer if this is spammed.
+router.post('/me/support', requireRole('CUSTOMER'), async (req, res) => {
+  const message = str(req.body, 'message', { max: 500 });
+  await withTransaction(async (c) => {
+    await c.query(`INSERT INTO support_requests (customer_id, message) VALUES ($1, $2)`, [req.auth!.customerId, message]);
+    await audit(c, 'SUPPORT_REQUEST_RAISED', { actorUserId: req.auth!.userId });
+  });
+  res.status(201).end();
 });
 
 export default router;

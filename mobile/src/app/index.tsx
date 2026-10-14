@@ -152,18 +152,18 @@ export default function Home() {
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({
-    page: { padding: size.pad, gap: 20, paddingBottom: 40 },
-    hero: { gap: 6, paddingTop: 12 },
+    page: { padding: size.pad, gap: 24, paddingBottom: 40 },
+    hero: { gap: 8, paddingTop: 24, paddingBottom: 8 },
     brand: { color: colors.accent, fontSize: 16, letterSpacing: 3, fontWeight: '700', textTransform: 'uppercase' },
-    title: { color: colors.text, fontSize: size.title, fontWeight: '700' },
+    title: { color: colors.text, fontSize: 32, lineHeight: 40, fontWeight: '800' },
     sub: { color: colors.muted, fontSize: size.body },
     actions: { gap: 12 },
     note: { color: colors.muted, fontSize: size.small },
     error: { color: colors.danger, fontSize: size.body },
     tile: {
       backgroundColor: colors.panel,
-      borderColor: colors.accent,
-      borderWidth: 2,
+      borderColor: colors.border,
+      borderWidth: 1,
       borderRadius: size.radius,
       padding: size.pad,
       minHeight: 80,
@@ -173,7 +173,7 @@ const makeStyles = (colors: Colors) =>
     pressed: { opacity: 0.7 },
     tileLabel: { color: colors.accent, fontSize: size.button, fontWeight: '700' },
     tileHint: { color: colors.muted, fontSize: size.small },
-    footer: { gap: 12, marginTop: 8 },
+    footer: { gap: 10, marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
     link: { minHeight: 48, justifyContent: 'center' },
     linkLabel: { color: colors.accent, fontSize: size.body, fontWeight: '700' },
     status: { flexDirection: 'row', alignItems: 'center', gap: 8 },

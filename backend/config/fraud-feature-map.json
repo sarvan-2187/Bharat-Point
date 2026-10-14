@@ -1,0 +1,5 @@
+{
+  "source": "NOT PROVIDED. The model card does not say how gender_num and location_code were encoded. Fill these tables from the training data's encoders (see docs/FRAUD_MODEL.md). Until then every assessment is INCOMPLETE and nothing is scored.",
+  "gender": {},
+  "location": {}
+}

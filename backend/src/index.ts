@@ -7,11 +7,14 @@ import { createApp } from './app';
 import { startProviderSweeper } from './provider/sweeper';
 import { startConfirmationSweeper } from './confirmation/sweeper';
 import { ivrSettings } from './config/env';
+import { fraudSettings } from './fraud/config';
 
 async function start() {
   // Fail loudly at boot rather than on the first transaction.
   await pool.query('SELECT 1');
   if (!ivrSettings()) console.warn('[api] IVR_URL is not set: customer confirmation calls are unavailable');
+  // Throws on an invalid threshold or token, so a bad risk setting stops the server instead of changing behaviour silently.
+  if (!fraudSettings().scorer) console.warn('[api] FRAUD_SCORER_URL is not set: payments show "assessment unavailable" in the admin fraud review');
 
   const server = createApp().listen(config.port, config.host, () => {
     console.log(`[api] listening on http://${config.host}:${config.port}`);

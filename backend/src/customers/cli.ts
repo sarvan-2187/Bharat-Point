@@ -25,6 +25,9 @@ async function main() {
       bank: { type: 'string' },
       balance: { type: 'string' },
       mode: { type: 'string' },
+      dob: { type: 'string' },
+      gender: { type: 'string' },
+      location: { type: 'string' },
     },
   });
   const name = values.name?.trim();
@@ -55,7 +58,10 @@ async function main() {
   });
   if (res.status !== 201) throw new Error(`the mock bank refused the account (HTTP ${res.status}). Is it running?`);
 
-  await withTransaction((c) => createCustomer(c, { displayName: name, phone, sipExtension: extension, mode, bankId, providerToken, maskedLabel }));
+  if (values.dob !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(values.dob)) throw new Error('--dob must be YYYY-MM-DD');
+  await withTransaction((c) =>
+    createCustomer(c, { displayName: name, phone, sipExtension: extension, mode, bankId, providerToken, maskedLabel, dateOfBirth: values.dob, gender: values.gender, location: values.location })
+  );
   console.log(`Seeded ${name}: phone ${phone}, ${maskedLabel}, balance ₹${rupees}, ${extension ? `IVR rings extension ${extension}` : 'no IVR extension (cannot confirm)'}, ${mode}.`);
 }
 

@@ -4,6 +4,7 @@
  * Express 5 forwards rejected promises from async handlers to the error
  * handler on its own, so PRISM's wrap() helper is not needed here.
  */
+import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import pool from './db/pool';
@@ -20,6 +21,17 @@ import adminRoutes from './admin/routes';
 
 export function createApp() {
   const app = express();
+  // The admin console is plain files on this server. Its own CSP: same-origin only, and no
+  // upgrade-insecure-requests (this is served over http on the laptop's loopback address).
+  app.use(
+    '/console',
+    helmet({
+      contentSecurityPolicy: {
+        directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'"], connectSrc: ["'self'"], imgSrc: ["'self'", 'data:'], upgradeInsecureRequests: null },
+      },
+    }),
+    express.static(path.resolve(__dirname, '../console'))
+  );
   app.use(helmet());
   app.use(express.json({ limit: '16kb' }));
 
