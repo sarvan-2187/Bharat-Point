@@ -1,8 +1,7 @@
 /**
- * Transaction API for Phase 3: an agent creates a transaction, signs its
- * intent hash with their phone, and may amend (supersede) or cancel it before
- * the customer confirms. Customer confirmation and the bank call arrive in
- * Phases 4 and 5.
+ * Transaction API: an agent creates a transaction, signs its intent hash with
+ * their phone, and may amend (supersede) or cancel it before the customer
+ * confirms. Staff list the recent transactions they may see (Phase 7).
  */
 import { Router } from 'express';
 import pool, { withTransaction } from '../db/pool';
@@ -14,6 +13,7 @@ import {
   canSee,
   cancelTransaction,
   createTransaction,
+  listViews,
   loadView,
   parseAmount,
   parseNewTransaction,
@@ -29,6 +29,10 @@ router.post('/transactions', requireRole('AGENT'), async (req, res) => {
   const input = parseNewTransaction(req.body);
   const tx = await withTransaction((c) => createTransaction(c, req.auth!, input));
   res.status(201).json(await view(tx.id));
+});
+
+router.get('/transactions', requireRole(), async (req, res) => {
+  res.json({ transactions: (await listViews(pool, req.auth!)).map(present) });
 });
 
 router.get('/transactions/:id', requireRole(), async (req, res) => {

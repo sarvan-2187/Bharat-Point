@@ -14,6 +14,7 @@ import { uuid } from '../api/validate';
 import { config } from '../config/env';
 import type { Auth } from '../auth/middleware';
 import { fromBase64url, intentMessage, verifyEd25519 } from '../auth/crypto';
+import { checkLimits } from '../limits/limits';
 import { appendStep, hasStage } from './chain';
 import { hashesMatch, intentFromRow, intentHash, type LockedIntent } from './intent';
 
@@ -104,6 +105,7 @@ async function insertTransaction(
   input: NewTransaction & { bankId: string },
   actor: Actor
 ): Promise<TxRow> {
+  await checkLimits(c, agentId, input.amountMinor); // fast feedback; enforced again before the bank
   const createdAt = Math.floor(Date.now() / 1000);
   const intent: LockedIntent = {
     accountLinkId: input.accountLinkId,
@@ -301,20 +303,42 @@ export interface TxViewRow extends TxRow {
   customer_name: string;
   masked_label: string;
   agent_signed: boolean;
+  confirmation: {
+    status: string;
+    channel: string;
+    mode: string;
+    expiresAt: string;
+    dial: number | null;
+    callState: string | null;
+  } | null;
 }
 
-export async function loadView(q: Pick<PoolClient, 'query'>, txId: string): Promise<TxViewRow | null> {
-  const { rows } = await q.query<TxViewRow>(
-    `SELECT t.*, c.display_name AS customer_name, l.masked_label,
+const VIEW_SELECT = `SELECT t.*, c.display_name AS customer_name, l.masked_label,
             EXISTS (SELECT 1 FROM authorization_steps s
-                     WHERE s.transaction_id = t.id AND s.stage = 'AGENT_SIGNED') AS agent_signed
+                     WHERE s.transaction_id = t.id AND s.stage = 'AGENT_SIGNED') AS agent_signed,
+            (SELECT json_build_object(
+                      'status', a.status, 'channel', a.channel, 'mode', a.mode, 'expiresAt', a.expires_at,
+                      'dial', ca.dial, 'callState', ca.state)
+               FROM transaction_authorizations a
+               LEFT JOIN LATERAL (SELECT dial, state FROM call_attempts
+                                   WHERE authorization_id = a.id ORDER BY dial DESC LIMIT 1) ca ON TRUE
+              WHERE a.transaction_id = t.id
+              ORDER BY a.created_at DESC LIMIT 1) AS confirmation
        FROM transactions t
        JOIN customers c              ON c.id = t.customer_id
-       JOIN customer_account_links l ON l.id = t.account_link_id
-      WHERE t.id = $1`,
-    [txId]
-  );
+       JOIN customer_account_links l ON l.id = t.account_link_id`;
+
+export async function loadView(q: Pick<PoolClient, 'query'>, txId: string): Promise<TxViewRow | null> {
+  const { rows } = await q.query<TxViewRow>(`${VIEW_SELECT} WHERE t.id = $1`, [txId]);
   return rows[0] ?? null;
+}
+
+/** The most recent transactions this staff member may see: the same rule as canSee. */
+export async function listViews(q: Pick<PoolClient, 'query'>, auth: Auth): Promise<TxViewRow[]> {
+  const [where, params] =
+    auth.role === 'ADMIN' ? ['TRUE', []] : auth.role === 'AGENT' ? ['t.agent_id = $1', [auth.agentId]] : ['t.bank_id = $1', [auth.bankId]];
+  const { rows } = await q.query<TxViewRow>(`${VIEW_SELECT} WHERE ${where} ORDER BY t.created_at DESC LIMIT 30`, params);
+  return rows;
 }
 
 /** Agents see their own; bank operators see their bank's; admins see all. */
@@ -339,4 +363,5 @@ export const present = (tx: TxViewRow) => ({
   createdAt: tx.created_at,
   expiresAt: tx.expires_at,
   supersededBy: tx.superseded_by,
+  confirmation: tx.confirmation,
 });

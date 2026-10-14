@@ -117,6 +117,13 @@ export async function suspendStaff(c: PoolClient, userId: string, actor: string 
   await audit(c, 'STAFF_SUSPENDED', { actorUserId: actor, data: { userId } });
 }
 
+/** Lift a suspension. Sessions ended by the suspension stay ended: the staff member signs in again. */
+export async function reactivateStaff(c: PoolClient, userId: string, actor: string | null): Promise<void> {
+  const { rowCount } = await c.query(`UPDATE users SET status = 'ACTIVE' WHERE id = $1 AND status = 'SUSPENDED'`, [userId]);
+  if (!rowCount) fail('NOT_FOUND');
+  await audit(c, 'STAFF_REACTIVATED', { actorUserId: actor, data: { userId } });
+}
+
 /** Lost or replaced phone: revoke every device key and session. A new invite re-enrols. */
 export async function resetDevices(c: PoolClient, userId: string, actor: string | null): Promise<void> {
   const exists = await c.query(`SELECT 1 FROM users WHERE id = $1`, [userId]);

@@ -13,6 +13,10 @@ import authRoutes from './auth/routes';
 import staffRoutes from './staff/routes';
 import transactionRoutes from './transactions/routes';
 import providerRoutes from './provider/routes';
+import confirmationRoutes from './confirmation/routes';
+import cashRoutes from './cash/routes';
+import customerRoutes from './customers/routes';
+import adminRoutes from './admin/routes';
 
 export function createApp() {
   const app = express();
@@ -29,7 +33,7 @@ export function createApp() {
   });
 
   // Every /api/v1 route sees req.auth (or not); each declares its own requireRole.
-  app.use('/api/v1', authenticate, authRoutes, staffRoutes, transactionRoutes, providerRoutes);
+  app.use('/api/v1', authenticate, authRoutes, staffRoutes, transactionRoutes, providerRoutes, confirmationRoutes, cashRoutes, customerRoutes, adminRoutes);
 
   app.use(errorHandler);
   return app;

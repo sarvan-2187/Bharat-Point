@@ -123,14 +123,6 @@ export default function Home() {
         </>
       )}
 
-      <Text style={styles.label}>DEMO</Text>
-      <Link href="/customer" asChild>
-        <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <Text style={styles.buttonLabel}>Customer phone</Text>
-          <Text style={styles.buttonHint}>Simulated confirmation call</Text>
-        </Pressable>
-      </Link>
-
       <Text style={styles.footer}>Demo build. All banks, customers and verifications are simulated.</Text>
     </ScrollView>
   );

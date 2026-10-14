@@ -31,6 +31,11 @@ export const FAILURES = {
   CHAIN_INCOMPLETE: [409, 'A required authorization step is missing.'],
   CAPABILITY_INVALID: [403, 'The settlement authorization is not valid.'],
   INTENT_EXPIRED: [410, 'This transaction has expired. Start a new one.'],
+  CONFIRMATION_RATE_LIMITED: [429, 'Too many confirmation calls to this customer. Try again later.'],
+  CONFIRMATION_UNAVAILABLE: [503, 'The customer cannot be called for confirmation right now.'],
+  LIMIT_EXCEEDED: [403, "This is over the agent's transaction limit."],
+  AGENT_SUSPENDED: [403, 'This agent is suspended.'],
+  MAKER_CHECKER: [403, 'The admin who requested this cannot also approve it.'],
   INTERNAL_ERROR: [500, 'Internal server error.'],
 } as const;
 

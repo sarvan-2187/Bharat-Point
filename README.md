@@ -43,6 +43,12 @@ npm run dev                        # http://127.0.0.1:4000/health
 npm run staff:invite -- --role ADMIN --code AD-001 --name "Your name"
 npm run staff:invite -- --role AGENT --code AG-001 --name "Agent name" --location "Village"
 
+# a demo customer: mock bank account + the softphone extension the IVR rings
+npm run customers:seed -- --name "Lakshmi" --phone 9876543210 --extension 6001 --balance 10000
+
+# customer confirmation call on a real phone (IVR_URL + IVR_SHARED_SECRET in .env)
+npm run ivr:try -- --amount 200
+
 cd ../mobile
 cp .env.example .env               # EXPO_PUBLIC_API_URL=http://<laptop LAN IP>:4000
 npm install
@@ -54,4 +60,12 @@ Windows Firewall on **private** networks only. The home screen shows **SERVER: C
 
 On each staff phone: **Enrol this phone** → scan the invite QR → confirm with fingerprint / screen lock.
 The phone keeps its own signing key; the server stores only the public half. A lost phone is cut off
-with `POST /api/v1/admin/staff/:id/reset-devices` (admin screen in Phase 8), then re-invited.
+from the admin phone (**Admin → staff member → Reset phones**), then re-invited from the same screen.
+
+On the admin phone: **Admin** shows alerts, replenishments waiting for a second admin, and every staff
+member. **Add staff** shows the new member's enrolment QR to scan on their phone. On an agent: limits,
+drawer and e-float from the ledger, **Replenish** (another admin approves), **Suspend** / **Reactivate**.
+
+At the counter (agent phone): **Agent ATM → New cash-out** → type the customer's mobile number → pick the
+account → enter ₹ → **Sign and call**. The customer's softphone rings and they key the amount. Hand over
+cash only when the screen says **Bank approved**, then confirm with fingerprint. The receipt follows.

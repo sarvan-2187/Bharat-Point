@@ -15,6 +15,10 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 
 export const enrolMessage = (inviteToken: string) => `bharatpoint/enrol/v1\n${inviteToken}`;
 export const loginMessage = (challengeId: string, nonce: string) => `bharatpoint/login/v1\n${challengeId}\n${nonce}`;
+export const intentMessage = (intentHash: string) => `bharatpoint/intent/v1\n${intentHash}`;
+export const handoverMessage = (intentHash: string) => `bharatpoint/handover/v1\n${intentHash}`;
+export const handoverFailedMessage = (intentHash: string) => `bharatpoint/handover-failed/v1\n${intentHash}`;
+export const cashReturnedMessage = (intentHash: string) => `bharatpoint/cash-returned/v1\n${intentHash}`;
 
 const SEED = 'bp.deviceKey.seed';
 const KEY_ID = 'bp.deviceKey.id';

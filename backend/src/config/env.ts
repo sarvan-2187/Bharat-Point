@@ -33,7 +33,26 @@ export const config = {
   providerTimeoutMs: Number(process.env.PROVIDER_TIMEOUT_MS ?? 5000),
   // Unanswered status inquiries before a person must reconcile the transaction.
   providerMaxInquiries: Number(process.env.PROVIDER_MAX_INQUIRIES ?? 5),
+  // Customer confirmation call: how long the customer has to answer and decide.
+  confirmationTtlSeconds: Number(process.env.CONFIRMATION_TTL_SECONDS ?? 180),
+  // Dials per confirmation (the first call plus one redial on no answer).
+  ivrMaxDials: Number(process.env.IVR_MAX_DIALS ?? 2),
+  // An IVR answer slower than this is treated as UNKNOWN and asked again later.
+  ivrTimeoutMs: Number(process.env.IVR_TIMEOUT_MS ?? 5000),
 } as const;
+
+/**
+ * The IVR that places customer confirmation calls, or null when none is
+ * configured (confirmation then fails closed: nothing can be confirmed).
+ * Read on every call, like isDemoMode.
+ */
+export function ivrSettings(): { url: string; secret: string } | null {
+  const url = process.env.IVR_URL;
+  if (!url) return null;
+  const secret = process.env.IVR_SHARED_SECRET ?? '';
+  if (secret.length < 32) throw new Error('IVR_SHARED_SECRET must be at least 32 characters when IVR_URL is set');
+  return { url: url.replace(/\/+$/, ''), secret };
+}
 
 /**
  * Demo-only features (customer simulator, fault injection, seed data) work only

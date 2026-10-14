@@ -50,6 +50,13 @@ export async function startHarness() {
   const bankUrl = `http://127.0.0.1:${(mockBank.address() as { port: number }).port}`;
   process.env.MOCK_BANK_URL = bankUrl;
 
+  // An in-process fake IVR (testing/fake-ivr.ts), so confirmation calls are real HTTP.
+  const ivrSecret = 'test-ivr-shared-secret-0123456789abcdef';
+  const { startFakeIvr }: typeof import('./fake-ivr') = require('./fake-ivr');
+  const ivr = await startFakeIvr(ivrSecret);
+  process.env.IVR_URL = ivr.url;
+  process.env.IVR_SHARED_SECRET = ivrSecret;
+
   async function bankCall(method: string, p: string, body?: unknown) {
     const res = await fetch(`${bankUrl}${p}`, {
       method,
@@ -69,6 +76,7 @@ export async function startHarness() {
   const poolModule: typeof import('../db/pool') = require('../db/pool');
   const { migrate }: typeof import('../db/migrate') = require('../db/migrate');
   const staff: typeof import('../staff/staff') = require('../staff/staff');
+  const customers: typeof import('../customers/customers') = require('../customers/customers');
   const { createApp }: typeof import('../app') = require('../app');
   const pool = poolModule.default;
   await migrate(pool, () => {});
@@ -96,23 +104,21 @@ export async function startHarness() {
   }
 
   /** A synthetic customer with one account at the given bank, mirrored at the mock bank. */
-  async function customer(name: string, bankCode = 'DEMO-SBI', opts: { balanceMinor?: number } = {}) {
+  let extensionSeq = 6000;
+  let phoneSeq = 0;
+  async function customer(
+    name: string,
+    bankCode = 'DEMO-SBI',
+    opts: { balanceMinor?: number; sipExtension?: string | null; mode?: 'BLIND_ENTRY' | 'READBACK'; phone?: string } = {}
+  ) {
     const bankId = await bank(bankCode);
-    const c = (
-      await pool.query<{ id: string }>(
-        `INSERT INTO customers (display_name, phone_enc, phone_lookup) VALUES ($1, '\\x00', $2) RETURNING id`,
-        [name, crypto.randomBytes(32).toString('hex')]
-      )
-    ).rows[0]!;
+    const sipExtension = opts.sipExtension === undefined ? String(++extensionSeq) : opts.sipExtension;
+    const phone = opts.phone ?? `98${String(++phoneSeq).padStart(8, '0')}`;
     const providerToken = crypto.randomUUID();
     const maskedLabel = `Demo ${bankCode} ••••${crypto.randomInt(1000, 9999)}`;
-    const link = (
-      await pool.query<{ id: string }>(
-        `INSERT INTO customer_account_links (customer_id, bank_id, provider_token, masked_label)
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-        [c.id, bankId, providerToken, maskedLabel]
-      )
-    ).rows[0]!;
+    const { customerId, accountLinkId } = await poolModule.withTransaction((c) =>
+      customers.createCustomer(c, { displayName: name, phone, sipExtension, mode: opts.mode ?? 'BLIND_ENTRY', bankId, providerToken, maskedLabel })
+    );
     await bankCall('POST', '/sim/accounts', {
       token: providerToken,
       bankCode,
@@ -120,7 +126,7 @@ export async function startHarness() {
       maskedLabel,
       balanceMinor: opts.balanceMinor ?? 1_000_000, // ₹10,000
     });
-    return { customerId: c.id, accountLinkId: link.id, bankId, providerToken };
+    return { customerId, accountLinkId, bankId, providerToken, sipExtension, phone };
   }
 
   let seq = 0;
@@ -162,12 +168,13 @@ export async function startHarness() {
     await new Promise((resolve) => server.close(resolve));
     mockBank.closeAllConnections(); // a deliberately late answer may still be pending
     await new Promise((resolve) => mockBank.close(resolve));
+    await ivr.close();
     await pool.end();
     await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);
     await admin.end();
   }
 
-  return { pool, withTransaction: poolModule.withTransaction, call, bank, customer, signedIn, provider, close };
+  return { pool, withTransaction: poolModule.withTransaction, call, bank, customer, signedIn, provider, ivr, close };
 }
 
 export type Harness = Awaited<ReturnType<typeof startHarness>>;
