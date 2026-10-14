@@ -9,7 +9,7 @@
     "start": "node --env-file=../.env dist/index.js",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=../.env src/db/migrate.ts",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "node --env-file-if-exists=../.env --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "express": "^5.3.0",
